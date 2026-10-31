@@ -1,9 +1,15 @@
 fastapi
 uvicorn[standard]
-google-genai
+pydantic>=2.0
 psycopg[binary]
 pgvector
 numpy
-pydantic
 python-dotenv
 pytest
+# LLM providers (B): Gemma API, local Ollama (also bge-m3 embeddings)
+google-genai
+httpx
+ollama
+# TTS (B): Kokoro-82M via ONNX
+kokoro-onnx
+soundfile
