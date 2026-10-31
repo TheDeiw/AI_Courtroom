@@ -11,6 +11,7 @@ moderator error → 'acquitted' (presumption of innocence).
 import logging
 import time
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 
 from app import db, policy, prompts
@@ -23,6 +24,7 @@ BATCH_LIMIT = 30
 CHAT_WINDOW = 15
 USER_HISTORY = 20
 TICK_SECONDS = 3
+MODERATOR_WORKERS = 4
 
 
 def loop_forever():                       # стартує в main.py як daemon-потік
@@ -69,11 +71,15 @@ def tick() -> int:
     if flagged:
         log.info("prefilter: %d/%d flagged %s", len(flagged), len(batch), flagged)
 
-    for msg_id, reason in flagged.items():
-        try:
-            analyze_and_apply(msg_id, reason)
-        except Exception as e:            # one bad message must not block the rest of the batch
-            log.exception("moderation of message %s failed: %s", msg_id, e)
+    # Flagged messages are independent: moderate them in parallel, so one slow LLM answer
+    # (a retry can take ~30 s) does not hold back the rest of the batch.
+    with ThreadPoolExecutor(MODERATOR_WORKERS) as ex:
+        futures = {ex.submit(analyze_and_apply, msg_id, reason): msg_id for msg_id, reason in flagged.items()}
+        for fut, msg_id in futures.items():
+            try:
+                fut.result()
+            except Exception as e:        # one bad message must not block the rest of the batch
+                log.exception("moderation of message %s failed: %s", msg_id, e)
     return len(batch)
 
 

@@ -2,6 +2,7 @@
 
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -18,7 +19,7 @@ def fake_provider(monkeypatch):
     answers: list = []
     calls: list = []
 
-    def fake(role, system, user, schema, temperature):
+    def fake(role, system, user, schema, temperature, attempt=0):
         calls.append(role)
         a = answers.pop(0)
         if isinstance(a, Exception):
@@ -76,6 +77,20 @@ def test_provider_exception_becomes_llm_error(fake_provider):
     answers.append(ConnectionError("network down"))
     with pytest.raises(llm.LLMError, match="network down"):
         llm.chat_json("triage", "s", "u", TriageResult)
+
+
+def test_fast_role_retries_in_thinking_mode(monkeypatch):
+    constrained = []
+
+    class FakeModels:
+        def generate_content(self, model, contents, config):
+            constrained.append(config.response_json_schema is not None)
+            return SimpleNamespace(text=VALID if len(constrained) == 2 else "not json", candidates=[])
+
+    monkeypatch.setattr(llm, "PROVIDER", "gemma_api")
+    monkeypatch.setattr(llm, "_gemma", lambda: SimpleNamespace(models=FakeModels()))
+    assert llm.chat_json("moderator", "s", "u", TriageResult).summary == "s"
+    assert constrained == [True, False]       # fast schema-constrained try, then the thinking mode
 
 
 def test_prefilter_uses_fast_model(monkeypatch):

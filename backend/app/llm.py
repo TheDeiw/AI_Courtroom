@@ -42,20 +42,28 @@ PROVIDER = os.getenv("LLM_PROVIDER", "ollama").strip().lower()
 FAST = os.getenv("FAST_MODEL", "gemma3:4b")          # Ollama tags
 MAIN = os.getenv("MAIN_MODEL", "gemma3:12b")
 EMBED = os.getenv("EMBED_MODEL", "bge-m3")
+# Embeddings: "ollama" (local bge-m3) or "gemini" (gemini-embedding-001 with the same API key,
+# no Ollama needed). Pick ONE per database: vectors of different models are not comparable,
+# so after switching run `python -m app.seed` again.
+EMBED_PROVIDER = os.getenv("EMBED_PROVIDER", "ollama").strip().lower()
+GEMINI_EMBED_MODEL = os.getenv("GEMINI_EMBED_MODEL", "gemini-embedding-001")
+EMBED_DIM = 1024                                      # precedents.embedding is vector(1024)
 # Google AI Studio serves Gemma 4 only (Gemma 3 returns 404). 26b-a4b is MoE with ~4B active
 # params: ~2-5 s per call. gemma-4-31b-it is stronger but ~30 s per call and flakier (HTTP 500s).
 GEMMA_FAST = os.getenv("GEMMA_FAST_MODEL", "gemma-4-26b-a4b-it")
 GEMMA_MAIN = os.getenv("GEMMA_MAIN_MODEL", "gemma-4-26b-a4b-it")
 # Two Gemma decoding modes (both answer application/json and are validated by Pydantic):
-#  - schema-constrained (response_json_schema): ~3 s, but longer Ukrainian text often comes out
-#    garbled or looping — fine for the short, latency-critical prefilter/moderator answers;
+#  - schema-constrained (response_json_schema): ~3 s, but free text often comes out garbled or
+#    looping ("…001_001_001", RECITATION blocks);
 #  - JSON mode with the schema in the prompt: the model thinks first (~1-2k hidden tokens,
-#    ~25-35 s) and writes clean Ukrainian — used for triage and the court, which run in background.
+#    ~15-35 s) and writes clean text.
+# Latency-critical roles (GEMMA_SCHEMA_ROLES) try the fast constrained mode first and fall back to
+# the thinking mode on the retry; every other role (triage, court) uses the thinking mode only.
 GEMMA_SCHEMA_ROLES = {r.strip() for r in os.getenv("GEMMA_SCHEMA_ROLES", "prefilter,moderator").split(",")}
 NUM_CTX = 8192
 # Caps runaway generation (repetition loops): without it a call can hang ~2 min and end in HTTP 504.
-# Normal answers are 100-600 tokens; the dialogue (8-12 lines in Ukrainian) needs ~1500.
-MAX_OUTPUT_TOKENS = {"dialogue": 3072}
+# A moderator answer is ~150 tokens, so a looping fast attempt is cut after ~10 s.
+MAX_OUTPUT_TOKENS = {"dialogue": 3072, "moderator": 512}
 DEFAULT_MAX_OUTPUT_TOKENS = 1024
 THINKING_MAX_OUTPUT_TOKENS = 8192            # includes the hidden thinking tokens
 GEMMA_TIMEOUT_S = float(os.getenv("GEMMA_TIMEOUT_S", "60"))
@@ -89,7 +97,7 @@ def chat_json(role: str, system: str, user: str, schema: type[BaseModel], temper
         temp = temperature if attempt == 0 else max(0.1, temperature - 0.3)
         t0 = time.monotonic()
         try:
-            raw = call(role, system, user, schema, temp)
+            raw = call(role, system, user, schema, temp, attempt)
         except LLMError:
             raise
         except Exception as e:  # network, provider, SDK errors → one error type for callers
@@ -126,6 +134,12 @@ def find_degenerate_text(value) -> str | None:
 
 def embed(text: str) -> list[float]:
     try:
+        if EMBED_PROVIDER == "gemini":
+            from google.genai import types
+
+            r = _gemma().models.embed_content(model=GEMINI_EMBED_MODEL, contents=text,
+                                              config=types.EmbedContentConfig(output_dimensionality=EMBED_DIM))
+            return list(r.embeddings[0].values)
         return list(ollama.embed(model=EMBED, input=text).embeddings[0])
     except Exception as e:
         raise LLMError(f"embed: {type(e).__name__}: {e}") from e
@@ -144,7 +158,7 @@ def _extract_json(raw: str) -> str:
 
 # --- ollama ----------------------------------------------------------------
 
-def _call_ollama(role, system, user, schema, temperature) -> str:
+def _call_ollama(role, system, user, schema, temperature, attempt=0) -> str:
     r = ollama.chat(
         model=model_for(role),
         messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
@@ -167,15 +181,15 @@ def _gemma():
             from google import genai
             from google.genai import types
 
-            key = os.getenv("GEMMA_API_KEY")
+            key = os.getenv("GEMMA_API_KEY") or os.getenv("GEMINI_API_KEY")  # README of A uses the latter
             if not key:
-                raise LLMError("GEMMA_API_KEY is not set (backend/.env)")
+                raise LLMError("GEMMA_API_KEY (or GEMINI_API_KEY) is not set in backend/.env")
             _gemma_client = genai.Client(
                 api_key=key, http_options=types.HttpOptions(timeout=int(GEMMA_TIMEOUT_S * 1000)))
         return _gemma_client
 
 
-def _call_gemma(role, system, user, schema, temperature) -> str:
+def _call_gemma(role, system, user, schema, temperature, attempt=0) -> str:
     from google.genai import errors, types
 
     # A moderation pipeline has to read toxic chat, so input blocking is off; the output is a
@@ -186,7 +200,8 @@ def _call_gemma(role, system, user, schema, temperature) -> str:
         types.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
         types.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
     )]
-    if "all" in GEMMA_SCHEMA_ROLES or role in GEMMA_SCHEMA_ROLES:
+    fast_role = "all" in GEMMA_SCHEMA_ROLES or role in GEMMA_SCHEMA_ROLES
+    if fast_role and attempt == 0:
         mode = dict(system_instruction=system, response_json_schema=schema.model_json_schema(),
                     max_output_tokens=_max_tokens(role),
                     http_options=types.HttpOptions(timeout=int(GEMMA_TIMEOUT_S * 1000)))
@@ -202,14 +217,18 @@ def _call_gemma(role, system, user, schema, temperature) -> str:
         safety_settings=safety,
         **mode,
     )
-    for attempt in range(2):  # one quick retry for transient HTTP errors (429/5xx) and timeouts
+    # Transient HTTP errors (429/5xx) and timeouts: latency-critical roles get one quick retry;
+    # background roles (triage, court) ride out Gemma API 500s with backoff (measured 2026-10-31:
+    # ~1 in 3 calls fail instantly with 500 INTERNAL, sometimes several in a row).
+    backoff = [2] if fast_role else [2, 4, 8, 15]
+    for http_try in range(len(backoff) + 1):
         try:
             r = _gemma().models.generate_content(model=model_for(role), contents=user, config=config)
         except (errors.APIError, httpx.TimeoutException) as e:
             code = getattr(e, "code", "timeout")
-            if attempt == 0 and (code == "timeout" or code in TRANSIENT_HTTP):
-                log.warning("%s: Gemma API %s, retrying", role, code)
-                time.sleep(2)
+            if http_try < len(backoff) and (code == "timeout" or code in TRANSIENT_HTTP):
+                log.warning("%s: Gemma API %s, retrying in %ss", role, code, backoff[http_try])
+                time.sleep(backoff[http_try])
                 continue
             raise
         if not r.text:
@@ -250,6 +269,7 @@ def _chat_json_anthropic(role, system, user, schema):
 if __name__ == "__main__":  # smoke test: python -m app.llm
     from app.schemas import TriageResult
 
-    print(f"provider={PROVIDER} main={model_for('triage')} fast={model_for('prefilter')} embed={EMBED}")
+    emb = GEMINI_EMBED_MODEL if EMBED_PROVIDER == "gemini" else EMBED
+    print(f"provider={PROVIDER} main={model_for('triage')} fast={model_for('prefilter')} embed={EMBED_PROVIDER}/{emb}")
     print(chat_json("triage", "Classify the appeal. Answer in Ukrainian.", "розбаньте плз", TriageResult))
     print(len(embed("тест")))  # очікуємо 1024
