@@ -1,0 +1,36 @@
+[
+  {
+    "id": 42,
+    "username": "kotyk_2007",
+    "status": "court_queue",
+    "attempt_no": 1,
+    "text": "It was my cat Barsyk who typed that! I swear, he walked across the keyboard while I was away. Barsyk is known for his aggressive typing style.",
+    "created_at": "2026-10-31T11:00:00Z",
+    "incident": {"id": 7, "action": "ban", "rule": "insult", "reason": "Insult directed at the streamer"},
+    "triage": {
+      "category": "interesting",
+      "interest_score": 9,
+      "sincerity": 4,
+      "reason": "Absurd but entertaining story with points on both sides",
+      "summary": "Claims the insult was typed by his cat Barsyk"
+    },
+    "case": {"id": 1, "status": "ready"}
+  },
+  {
+    "id": 43,
+    "username": "viewer_999",
+    "status": "court_queue",
+    "attempt_no": 2,
+    "text": "I was just quoting something I saw in another stream and didn't realize it could be taken out of context.",
+    "created_at": "2026-10-31T11:30:00Z",
+    "incident": {"id": 6, "action": "ban", "rule": "harassment", "reason": "Repeated harassment"},
+    "triage": {
+      "category": "interesting",
+      "interest_score": 6,
+      "sincerity": 6,
+      "reason": "Context defense with some merit",
+      "summary": "Claims it was an out-of-context quote"
+    },
+    "case": {"id": 2, "status": "preparing"}
+  }
+]

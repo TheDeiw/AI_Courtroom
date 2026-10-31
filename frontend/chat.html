@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Courtroom — Live Chat</title>
+  <meta name="description" content="AI-moderated live stream chat simulation. Watch as AI moderates messages in real time, detecting violations and issuing bans automatically." />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="chat.css" />
+</head>
+<body>
+
+<!-- ── Top Nav ───────────────────────────────────── -->
+<nav class="topnav">
+  <div class="topnav-brand">
+    <span class="brand-icon">⚖️</span>
+    AI Courtroom
+  </div>
+  <div class="topnav-links">
+    <a href="chat.html" class="topnav-link active">💬 Chat</a>
+    <a href="appeal.html" class="topnav-link">📜 Appeal</a>
+    <a href="admin.html" class="topnav-link">🛡️ Admin</a>
+  </div>
+</nav>
+
+<!-- ── Main Layout ───────────────────────────────── -->
+<main class="chat-main">
+
+  <!-- ── Stream Panel ──────────────────────────────── -->
+  <div class="stream-panel">
+    <!-- Video placeholder -->
+    <div class="stream-video">
+      <div class="stream-overlay-top">
+        <div class="live-badge">
+          <span class="live-dot"></span> LIVE
+        </div>
+        <div class="viewer-count">
+          <span>👁</span>
+          <span id="viewer-count">1,247</span>
+        </div>
+      </div>
+      <div class="stream-center-content">
+        <div class="game-icon">🎮</div>
+        <div class="game-title">The Witcher 3: Wild Hunt</div>
+        <div class="streamer-name">witcher_streamer_ua</div>
+      </div>
+      <div class="stream-overlay-bottom">
+        <div class="stream-channel-info">
+          <div class="channel-tag">🐺 First Playthrough — No Spoilers!</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stream Info -->
+    <div class="stream-info-bar">
+      <div class="stream-info-left">
+        <div class="streamer-avatar">W</div>
+        <div>
+          <div class="streamer-name-bar">witcher_streamer_ua</div>
+          <div class="stream-category">The Witcher 3: Wild Hunt</div>
+        </div>
+      </div>
+      <div class="stream-actions">
+        <button class="btn btn-primary btn-sm" id="btn-demo" onclick="startDemoReplay()">
+          ▶ Demo Replay
+        </button>
+        <button class="btn btn-ghost btn-sm" id="btn-stop-demo" onclick="stopDemoReplay()" style="display:none">
+          ⏹ Stop Demo
+        </button>
+      </div>
+    </div>
+
+    <!-- AI Moderator status -->
+    <div class="ai-status-bar">
+      <div class="ai-status-left">
+        <div class="ai-indicator">
+          <span class="ai-dot active"></span>
+          <span>AI Moderator</span>
+          <span class="badge badge-success" style="font-size:10px">Active</span>
+        </div>
+      </div>
+      <div class="ai-stats">
+        <span class="ai-stat">🔍 <span id="ai-checked">0</span> checked</span>
+        <span class="ai-stat">🚫 <span id="ai-removed">0</span> removed</span>
+        <span class="ai-stat">⏱ <span id="ai-timeouts">0</span> timeouts</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Chat Panel ────────────────────────────────── -->
+  <div class="chat-panel">
+
+    <!-- Chat header -->
+    <div class="chat-header">
+      <div class="chat-title">
+        <span>💬</span> Stream Chat
+        <span class="badge badge-muted" id="chat-count">0 messages</span>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="toggleScroll()" id="scroll-toggle" title="Toggle auto-scroll">
+        ⬇ Auto-scroll
+      </button>
+    </div>
+
+    <!-- Messages list -->
+    <div class="chat-messages" id="chat-messages">
+      <div class="chat-loading">
+        <span class="spinner"></span> Loading chat…
+      </div>
+    </div>
+
+    <!-- Ban banner -->
+    <div class="ban-banner hidden" id="ban-banner">
+      <div class="ban-banner-icon">🚫</div>
+      <div class="ban-banner-content">
+        <div class="ban-banner-title" id="ban-banner-title">You are banned</div>
+        <div class="ban-banner-reason" id="ban-banner-reason"></div>
+      </div>
+      <a href="#" id="ban-banner-appeal" class="btn btn-ghost btn-sm">
+        📜 Appeal
+      </a>
+    </div>
+
+    <!-- Input area -->
+    <div class="chat-input-area">
+      <div class="chat-input-row">
+        <input
+          type="text"
+          id="chat-nick"
+          class="form-control nick-input"
+          placeholder="Nickname"
+          maxlength="32"
+          oninput="saveNick(this.value)"
+        />
+      </div>
+      <div class="chat-input-row">
+        <textarea
+          id="chat-message"
+          class="form-control message-input"
+          placeholder="Say something…"
+          maxlength="500"
+          rows="2"
+          onkeydown="handleChatKey(event)"
+        ></textarea>
+        <button class="btn btn-primary send-btn" id="send-btn" onclick="sendMessage()">
+          Send
+        </button>
+      </div>
+      <div class="chat-input-footer">
+        <span class="text-muted" style="font-size:11px">Press Enter to send · Shift+Enter for newline</span>
+        <span class="text-muted" id="msg-char-count" style="font-size:11px">0 / 500</span>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script type="module" src="chat.js"></script>
+</body>
+</html>

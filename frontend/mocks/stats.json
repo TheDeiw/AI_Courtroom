@@ -1,0 +1,17 @@
+{
+  "messages_total": 48,
+  "prefilter_flagged": 9,
+  "deep_acquitted": 3,
+  "timeouts": 4,
+  "bans": 2,
+  "appeals": {
+    "rejected_auto": 1,
+    "support_queue": 1,
+    "court_queue": 2,
+    "resolved_upheld": 0,
+    "resolved_overturned": 1
+  },
+  "overturn_rate": 0.5,
+  "avg_resolution_min": 3.4,
+  "precedents_total": 6
+}

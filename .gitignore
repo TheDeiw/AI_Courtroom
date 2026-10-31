@@ -218,3 +218,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# AI-Суд: Kokoro model weights (python -m app.tts --download) and generated court audio
+backend/models/
+frontend/static/audio/cases/

@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Courtroom — Submit Appeal</title>
+  <meta name="description" content="Submit an appeal for your Twitch ban. Provide your account details and explain why you believe your ban was unjustified." />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="appeal.css" />
+</head>
+<body>
+
+<!-- ── Top Nav ───────────────────────────────────── -->
+<nav class="topnav">
+    <!-- Dev skip auth button -->
+    <button id="dev-skip-auth" class="btn btn-ghost btn-sm" style="position:fixed;top:10px;right:10px;z-index:1000;opacity:0.6;" title="Skip authentication (dev)">⏭ Skip Auth</button>
+  <div class="topnav-brand">
+    <span class="brand-icon">⚖️</span>
+    AI Courtroom
+  </div>
+  <div class="topnav-links" id="nav-links">
+    <a href="chat.html" class="topnav-link">💬 Chat</a>
+    <a href="appeal.html" class="topnav-link active">📜 Appeal</a>
+    <a href="admin.html" class="topnav-link">🛡️ Admin</a>
+  </div>
+</nav>
+
+<!-- ── Main ──────────────────────────────────────── -->
+<main class="appeal-main">
+
+  <!-- Hero -->
+  <div class="appeal-hero fade-in">
+    <div class="hero-icon">⚖️</div>
+    <h1>Ban Appeal</h1>
+    <p class="hero-sub">Believe your ban was unfair? Tell us your story — AI and moderators will review your case.</p>
+  </div>
+
+  <!-- Step indicator -->
+  <div class="steps fade-in" id="steps">
+    <div class="step active" id="step-indicator-1">
+      <div class="step-num">1</div>
+      <span>Verify Account</span>
+    </div>
+    <div class="step-line"></div>
+    <div class="step" id="step-indicator-2">
+      <div class="step-num">2</div>
+      <span>View Ban</span>
+    </div>
+    <div class="step-line"></div>
+    <div class="step" id="step-indicator-3">
+      <div class="step-num">3</div>
+      <span>Submit Appeal</span>
+    </div>
+    <div class="step-line"></div>
+    <div class="step" id="step-indicator-4">
+      <div class="step-num">4</div>
+      <span>Track Status</span>
+    </div>
+  </div>
+
+  <div class="appeal-content">
+
+    <!-- ── STEP 1: Account Login ──────────────────── -->
+    <section class="appeal-card fade-in" id="step-login">
+      <div class="card-header">
+        <div class="card-title">
+          <span>👤</span> Verify Your Account
+        </div>
+      </div>
+
+      <p class="step-desc">Sign in with your Twitch account or use your email to identify yourself.</p>
+
+      <!-- Auth Tabs -->
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="tab-twitch" onclick="switchAuthTab('twitch')">
+          <span>🎮</span> Twitch Account
+        </button>
+        <button class="auth-tab" id="tab-email" onclick="switchAuthTab('email')">
+          <span>✉️</span> Email
+        </button>
+      </div>
+
+      <!-- Twitch Panel -->
+      <div id="panel-twitch" class="auth-panel">
+        <div class="twitch-login-box">
+          <div class="twitch-logo">
+            <svg viewBox="0 0 24 24" fill="currentColor" width="32" height="32"><path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z"/></svg>
+          </div>
+          <h3>Connect with Twitch</h3>
+          <p>Enter your Twitch username to look up your ban status.</p>
+          <div class="form-group" style="margin-top:16px">
+            <label class="form-label" for="twitch-username">Twitch Username</label>
+            <input type="text" id="twitch-username" class="form-control" placeholder="your_twitch_handle" autocomplete="username" />
+          </div>
+          <button class="btn btn-primary w-full" id="btn-twitch-connect" onclick="connectTwitch()">
+            <span>🎮</span> Verify Twitch Account
+          </button>
+        </div>
+      </div>
+
+      <!-- Email Panel -->
+      <div id="panel-email" class="auth-panel hidden">
+        <div class="form-group">
+          <label class="form-label" for="email-username">Twitch Username</label>
+          <input type="text" id="email-username" class="form-control" placeholder="your_twitch_handle" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="email-addr">Email Address</label>
+          <input type="email" id="email-addr" class="form-control" placeholder="you@example.com" />
+        </div>
+        <button class="btn btn-primary" id="btn-email-connect" onclick="connectEmail()">
+          <span>✉️</span> Verify with Email
+        </button>
+      </div>
+
+      <div id="login-error" class="alert alert-danger hidden" style="margin-top:12px">
+        <span>⚠️</span>
+        <span id="login-error-text"></span>
+      </div>
+    </section>
+
+    <!-- ── STEP 2: Ban Status ──────────────────────── -->
+    <section class="appeal-card fade-in hidden" id="step-ban-status">
+      <div class="card-header">
+        <div class="card-title">
+          <span>🔍</span> Your Current Status
+        </div>
+        <div id="user-badge-area"></div>
+      </div>
+
+      <!-- No ban -->
+      <div id="status-no-ban" class="hidden">
+        <div class="status-box status-ok">
+          <div class="status-icon">✅</div>
+          <div>
+            <h3>No active ban</h3>
+            <p>Your account is in good standing. You can participate in chat normally.</p>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="card-title" style="margin-bottom:12px"><span>📋</span> Ban History</div>
+        <div id="ban-history-list" class="history-list"></div>
+      </div>
+
+      <!-- Active ban -->
+      <div id="status-active-ban" class="hidden">
+        <div class="status-box status-banned">
+          <div class="status-icon">🚫</div>
+          <div>
+            <h3 id="ban-type-label">You are banned</h3>
+            <p id="ban-reason-text"></p>
+          </div>
+        </div>
+
+        <div class="incident-card" id="active-incident-card">
+          <div class="incident-row">
+            <span class="incident-label">Action</span>
+            <span id="inc-action" class="badge badge-danger"></span>
+          </div>
+          <div class="incident-row">
+            <span class="incident-label">Rule violated</span>
+            <span id="inc-rule" class="badge badge-warning"></span>
+          </div>
+          <div class="incident-row">
+            <span class="incident-label">Reason</span>
+            <span id="inc-reason" class="text-secondary"></span>
+          </div>
+          <div class="incident-row">
+            <span class="incident-label">Date</span>
+            <span id="inc-date" class="text-muted"></span>
+          </div>
+          <div class="incident-row" id="inc-expires-row">
+            <span class="incident-label">Expires</span>
+            <span id="inc-expires" class="text-muted"></span>
+          </div>
+          <div class="incident-row">
+            <span class="incident-label">AI confidence</span>
+            <div class="confidence-bar-wrap">
+              <div class="confidence-bar" id="confidence-bar"></div>
+            </div>
+            <span id="inc-confidence" class="text-muted" style="font-size:12px;min-width:36px;text-align:right"></span>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- Ban history tab toggle -->
+        <button class="btn btn-ghost btn-sm" id="btn-show-history" onclick="toggleHistory()" style="margin-bottom:12px">
+          📋 View ban history
+        </button>
+        <div id="ban-history-list-2" class="history-list hidden"></div>
+
+        <button class="btn btn-primary btn-lg w-full" id="btn-go-appeal" onclick="goToAppealForm()">
+          📜 Submit an Appeal
+        </button>
+      </div>
+    </section>
+
+    <!-- ── STEP 3: Appeal Form ────────────────────── -->
+    <section class="appeal-card fade-in hidden" id="step-appeal-form">
+      <div class="card-header">
+        <div class="card-title">
+          <span>✍️</span> Write Your Appeal
+        </div>
+        <span class="badge badge-warning" id="attempt-badge"></span>
+      </div>
+
+      <div class="appeal-guidelines">
+        <div class="guideline-item">
+          <span>💡</span>
+          <span>Explain clearly why you believe the ban was unjustified</span>
+        </div>
+        <div class="guideline-item">
+          <span>🎭</span>
+          <span>Provide context — what you were trying to say, what the situation was</span>
+        </div>
+        <div class="guideline-item">
+          <span>🤝</span>
+          <span>Be honest and sincere — AI evaluates the credibility of your appeal</span>
+        </div>
+      </div>
+
+      <form id="appeal-form" onsubmit="submitAppeal(event)">
+        <div class="form-group">
+          <label class="form-label" for="appeal-text">
+            Why should your ban be lifted? <span class="text-danger">*</span>
+          </label>
+          <textarea
+            id="appeal-text"
+            class="form-control appeal-textarea"
+            placeholder="Explain in detail why you believe your ban was unjustified. Describe the context, your intent, and any relevant circumstances..."
+            minlength="20"
+            maxlength="2000"
+            required
+            oninput="updateCharCount(this)"
+          ></textarea>
+          <div class="char-counter">
+            <span id="char-count">0</span> / 2000
+            <span id="char-min-hint" class="text-muted">(minimum 20)</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="appeal-contact">
+            Contact (optional)
+          </label>
+          <input
+            type="text"
+            id="appeal-contact"
+            class="form-control"
+            placeholder="Email or Discord — in case moderators need to reach you"
+          />
+        </div>
+
+        <div id="appeal-submit-error" class="alert alert-danger hidden" style="margin-bottom:14px">
+          <span>⚠️</span>
+          <span id="appeal-submit-error-text"></span>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" class="btn btn-ghost" onclick="goBack()">← Back</button>
+          <button type="submit" class="btn btn-primary btn-lg" id="btn-submit-appeal">
+            <span>🚀</span> Submit Appeal
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <!-- ── STEP 4: Status Tracker ─────────────────── -->
+    <section class="appeal-card fade-in hidden" id="step-status">
+      <div class="card-header">
+        <div class="card-title">
+          <span>📡</span> Appeal Status
+        </div>
+        <div class="badge badge-muted" id="attempt-no-badge"></div>
+      </div>
+
+      <div id="status-tracker">
+        <div class="tracker-animation" id="tracker-anim">
+          <div class="tracker-icon" id="tracker-icon">🤖</div>
+          <h2 id="tracker-title">AI is reviewing your appeal…</h2>
+          <p id="tracker-desc" class="text-secondary">This usually takes a few seconds. The page updates automatically.</p>
+        </div>
+
+        <div class="status-timeline" id="status-timeline">
+          <div class="timeline-item done" id="tl-submitted">
+            <div class="tl-dot"></div>
+            <div class="tl-content">
+              <strong>Appeal submitted</strong>
+              <span class="text-muted" id="tl-submitted-time"></span>
+            </div>
+          </div>
+          <div class="timeline-item" id="tl-review">
+            <div class="tl-dot"></div>
+            <div class="tl-content">
+              <strong>Under AI review</strong>
+            </div>
+          </div>
+          <div class="timeline-item" id="tl-result">
+            <div class="tl-dot"></div>
+            <div class="tl-content">
+              <strong id="tl-result-label">Decision</strong>
+              <span class="text-muted" id="tl-result-desc"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+      <div class="status-actions">
+        <button class="btn btn-ghost btn-sm" onclick="location.href='chat.html'">
+          💬 Go to Chat
+        </button>
+        <button class="btn btn-ghost btn-sm" onclick="location.reload()">
+          🔄 Refresh
+        </button>
+      </div>
+    </section>
+
+  </div>
+</main>
+
+<script type="module" src="appeal.js"></script>
+</body>
+</html>

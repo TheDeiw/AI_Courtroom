@@ -151,6 +151,25 @@ Object.keys(ROLES).forEach(r => [0, 1].forEach(o => { new Image().src = img(r, o
 let skipped = false;
 let ac = null;
 
+// Озвучка Kokoro (B): у кожної репліки може бути line.audio_url. Поки голос грає, «блипи» мовчать;
+// без audio_url або при помилці відтворення сцена працює як раніше.
+let voice = null, voiceOn = false, voiceDone = null;
+
+function speak(line) {
+  if (!line.audio_url) return Promise.resolve();
+  return new Promise(resolve => {
+    voice = new Audio(line.audio_url);
+    voiceDone = () => { voiceOn = false; voiceDone = null; resolve(); };
+    voice.onended = voice.onerror = () => voiceDone && voiceDone();
+    voice.play().then(() => { voiceOn = true; }).catch(() => voiceDone && voiceDone());
+  });
+}
+
+function stopVoice() {
+  if (voice) voice.pause();
+  if (voiceDone) voiceDone();
+}
+
 function blip(freq) {
   if (!ac) return;
   const o = ac.createOscillator(), g = ac.createGain();
@@ -198,7 +217,7 @@ async function type(key, text) {
     const ch = text[i];
     out.textContent = text.slice(0, i + 1);
     if (/[\p{L}\p{N}]/u.test(ch)) {
-      if (letters % 2 === 0) blip(ROLES[key].pitch);
+      if (letters % 2 === 0 && !voiceOn) blip(ROLES[key].pitch);
       if (letters % 3 === 0) { open = !open; sprite.src = img(key, open); }
       letters++;
     } else if (/[.,!?…:;—]/.test(ch)) {
@@ -223,9 +242,11 @@ async function play(line, prevSpeaker) {
     await shout(SHOUT[line.emotion]);
   }
   if (line.emotion === 'angry') retrigger(sprite, 'shake');
+  const spoken = speak(line);
   await type(key, line.text);
+  await spoken;                           // друкарська машинка не обганяє голос
   $('more').hidden = false;
-  if (!skipped) await sleep(700 + line.text.length * 8);
+  if (!skipped) await sleep(line.audio_url ? 500 : 700 + line.text.length * 8);
 }
 
 function showVerdict(c) {
@@ -288,7 +309,7 @@ sprite.src = img('judge', false);
 $('plate').textContent = ROLES.judge.name;
 $('start').disabled = false;
 
-$('skip').onclick = () => { skipped = true; };
+$('skip').onclick = () => { skipped = true; stopVoice(); };
 $('start').onclick = async () => {
   ac = new (window.AudioContext || window.webkitAudioContext)(); // потрібен жест користувача
   $('cover').hidden = true;

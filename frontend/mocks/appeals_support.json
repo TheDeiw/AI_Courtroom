@@ -1,0 +1,19 @@
+[
+  {
+    "id": 44,
+    "username": "geralt_fan",
+    "status": "support_queue",
+    "attempt_no": 1,
+    "text": "I didn't know that was a spoiler. The game is from 2015 and I thought everyone had already seen the ending. I apologize for posting it.",
+    "created_at": "2026-10-31T10:50:00Z",
+    "incident": {"id": 5, "action": "timeout", "rule": "spoiler", "reason": "Posted a spoiler about the game ending"},
+    "triage": {
+      "category": "disputed",
+      "interest_score": 4,
+      "sincerity": 8,
+      "reason": "Plausible misunderstanding about what counts as a spoiler",
+      "summary": "Claims ignorance — game is old so they thought spoilers were okay"
+    },
+    "case": null
+  }
+]

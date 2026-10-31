@@ -1,0 +1,469 @@
+/* chat.css — styles for chat.html */
+
+/* ── Layout ──────────────────────────────────────── */
+.chat-main {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  height: calc(100vh - 56px);
+  overflow: hidden;
+}
+
+/* ── Stream Panel ─────────────────────────────────── */
+.stream-panel {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border);
+  overflow: hidden;
+}
+
+/* ── Stream Video ─────────────────────────────────── */
+.stream-video {
+  position: relative;
+  aspect-ratio: 16/9;
+  max-height: 55vh;
+  background: radial-gradient(ellipse at center,
+    #1a1e2a 0%,
+    #0d0f14 60%,
+    #080a10 100%);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+.stream-video::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(135deg, rgba(108,99,255,0.08) 0%, transparent 60%),
+    linear-gradient(225deg, rgba(145,71,255,0.06) 0%, transparent 60%);
+}
+
+/* Scanlines effect */
+.stream-video::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.03) 2px,
+    rgba(0,0,0,0.03) 4px
+  );
+  pointer-events: none;
+}
+
+.stream-overlay-top {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  right: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  z-index: 2;
+}
+.live-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--live-red);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  padding: 4px 12px;
+  border-radius: var(--radius-sm);
+  box-shadow: 0 0 12px rgba(224, 60, 60, 0.5);
+}
+.live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #fff;
+  animation: pulse 1.2s ease infinite;
+}
+.viewer-count {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(0,0,0,0.6);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  backdrop-filter: blur(6px);
+}
+
+.stream-center-content {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+  gap: 8px;
+}
+.game-icon {
+  font-size: 56px;
+  filter: drop-shadow(0 0 20px rgba(108,99,255,0.5));
+  animation: float 4s ease-in-out infinite;
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-10px); }
+}
+.game-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  text-shadow: 0 2px 12px rgba(0,0,0,0.8);
+}
+.streamer-name {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.stream-overlay-bottom {
+  position: absolute;
+  bottom: 14px;
+  left: 14px;
+  right: 14px;
+  z-index: 2;
+}
+.channel-tag {
+  display: inline-block;
+  background: rgba(0,0,0,0.6);
+  color: var(--text-secondary);
+  font-size: 12px;
+  padding: 4px 12px;
+  border-radius: var(--radius-sm);
+  backdrop-filter: blur(6px);
+}
+
+/* ── Stream Info Bar ──────────────────────────────── */
+.stream-info-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.stream-info-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.streamer-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--twitch));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+.streamer-name-bar {
+  font-weight: 700;
+  font-size: 14px;
+}
+.stream-category {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.stream-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* ── AI Status Bar ────────────────────────────────── */
+.ai-status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: var(--bg-primary);
+  border-top: 1px solid var(--border);
+  margin-top: auto;
+  flex-shrink: 0;
+}
+.ai-status-left {
+  display: flex;
+  align-items: center;
+}
+.ai-indicator {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.ai-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-muted);
+}
+.ai-dot.active {
+  background: var(--success);
+  box-shadow: 0 0 6px var(--success);
+  animation: pulse 1.5s ease infinite;
+}
+.ai-stats {
+  display: flex;
+  gap: 16px;
+}
+.ai-stat {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.ai-stat span { font-weight: 700; color: var(--text-secondary); }
+
+/* ── Chat Panel ──────────────────────────────────── */
+.chat-panel {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-secondary);
+  overflow: hidden;
+}
+
+/* ── Chat Header ─────────────────────────────────── */
+.chat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.chat-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+/* ── Messages ────────────────────────────────────── */
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.chat-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--text-muted);
+  padding: 40px;
+  font-size: 13px;
+}
+
+/* ── Message item ────────────────────────────────── */
+.msg {
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+  padding: 4px 16px;
+  transition: background 0.15s;
+  position: relative;
+  animation: slideIn 0.2s ease;
+}
+.msg:hover {
+  background: var(--bg-hover);
+}
+.msg-time {
+  font-size: 11px;
+  color: var(--text-muted);
+  min-width: 42px;
+  padding-top: 2px;
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-mono);
+}
+.msg-body {
+  flex: 1;
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+.msg-nick {
+  font-weight: 700;
+  margin-right: 4px;
+}
+.msg-text {
+  color: var(--text-secondary);
+}
+
+/* Status variants */
+.msg.msg-removed .msg-text {
+  color: var(--text-muted);
+  font-style: italic;
+}
+.msg.msg-removed .msg-body::after {
+  content: '  [message removed by moderator]';
+  color: var(--danger);
+  font-size: 11px;
+  font-weight: 600;
+}
+.msg.msg-flagged .msg-body {
+  opacity: 0.6;
+}
+.msg.msg-acquitted .msg-nick::after {
+  content: ' ✓';
+  color: var(--success);
+  font-size: 10px;
+}
+
+/* ── System message (incident) ───────────────────── */
+.msg-system {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  font-size: 12px;
+  animation: slideIn 0.3s ease;
+  background: linear-gradient(90deg, transparent, var(--bg-primary) 20%, var(--bg-primary) 80%, transparent);
+}
+.msg-system-icon { font-size: 14px; flex-shrink: 0; }
+.msg-system-text { color: var(--text-muted); }
+.msg-system-text strong { color: var(--text-secondary); }
+.msg-system.ban    { background: linear-gradient(90deg, transparent, var(--danger-bg) 20%, var(--danger-bg) 80%, transparent); }
+.msg-system.timeout{ background: linear-gradient(90deg, transparent, var(--warning-bg) 20%, var(--warning-bg) 80%, transparent); }
+
+/* ── AI pending indicator ────────────────────────── */
+.msg-flagged-indicator {
+  font-size: 10px;
+  color: var(--warning);
+  margin-left: 4px;
+  animation: pulse 1.5s ease infinite;
+}
+
+/* ── Nick colors ──────────────────────────────────── */
+.nick-color-0 { color: #e05c5c; }
+.nick-color-1 { color: #f59e42; }
+.nick-color-2 { color: #4ec994; }
+.nick-color-3 { color: #3b9eff; }
+.nick-color-4 { color: #9147ff; }
+.nick-color-5 { color: #ff6cb3; }
+.nick-color-6 { color: #6c63ff; }
+.nick-color-7 { color: #56cfe1; }
+
+/* ── Ban Banner ──────────────────────────────────── */
+.ban-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--danger-bg);
+  border-top: 1px solid rgba(224,92,92,0.4);
+  border-bottom: 1px solid rgba(224,92,92,0.4);
+  flex-shrink: 0;
+  animation: fadeIn 0.3s ease;
+}
+.ban-banner-icon { font-size: 24px; flex-shrink: 0; }
+.ban-banner-content { flex: 1; }
+.ban-banner-title {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--danger);
+  margin-bottom: 2px;
+}
+.ban-banner-reason {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* ── Chat Input ──────────────────────────────────── */
+.chat-input-area {
+  padding: 12px 12px 10px;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.chat-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+}
+.nick-input {
+  max-width: 140px;
+  font-size: 13px;
+  padding: 7px 10px;
+}
+.message-input {
+  flex: 1;
+  resize: none;
+  font-size: 13px;
+  padding: 7px 10px;
+  line-height: 1.4;
+}
+.send-btn {
+  height: fit-content;
+  align-self: flex-end;
+  padding: 8px 16px;
+  font-size: 13px;
+}
+.chat-input-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* ── Demo replay progress ────────────────────────── */
+.demo-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--info-bg);
+  border-top: 1px solid rgba(59,158,255,0.2);
+  font-size: 12px;
+  color: var(--info);
+  flex-shrink: 0;
+}
+.demo-progress-bar-wrap {
+  flex: 1;
+  height: 4px;
+  background: var(--border);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+.demo-progress-bar {
+  height: 100%;
+  background: var(--info);
+  border-radius: var(--radius-full);
+  transition: width 0.3s ease;
+}
+
+/* ── Responsive ──────────────────────────────────── */
+@media (max-width: 900px) {
+  .chat-main {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+    height: auto;
+    min-height: calc(100vh - 56px);
+  }
+  .stream-panel {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+  .chat-panel {
+    height: 60vh;
+  }
+  .stream-video { max-height: 40vh; }
+  .ai-stats { display: none; }
+}
