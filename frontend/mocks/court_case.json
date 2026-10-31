@@ -1,9 +1,26 @@
 {
   "id": 1,
   "status": "ready",
-  "appeal": {"id": 42, "attempt_no": 1, "summary": "Claims the insult was typed by his cat Barsyk"},
-  "defendant": {"username": "kotyk_2007", "incidents_total": 2, "channels": ["main", "minecraft_ua"], "previous_appeals": 1},
-  "incident": {"id": 7, "action": "ban", "rule": "insult", "reason": "Insult directed at the streamer"},
+  "appeal": {
+    "id": 42,
+    "attempt_no": 1,
+    "summary": "Claims the insult was typed by his cat Barsyk"
+  },
+  "defendant": {
+    "username": "kotyk_2007",
+    "incidents_total": 2,
+    "channels": [
+      "main",
+      "minecraft_ua"
+    ],
+    "previous_appeals": 1
+  },
+  "incident": {
+    "id": 7,
+    "action": "ban",
+    "rule": "insult",
+    "reason": "Insult directed at the streamer"
+  },
   "defense": {
     "arguments": [
       "Over the past month in chat — not a single toxic message from kotyk_2007.",
@@ -24,22 +41,68 @@
     "decision": "overturn",
     "confidence": 0.68,
     "reasoning": "The cat story is implausible, but this is the first insult without prior toxicity. According to precedent #1, such a case ends with an unban with a warning.",
-    "key_factors": ["No prior toxicity", "Cat story is unlikely", "Precedent #1"],
-    "precedent_ids": [1]
+    "key_factors": [
+      "No prior toxicity",
+      "Cat story is unlikely",
+      "Precedent #1"
+    ],
+    "precedent_ids": [
+      1
+    ]
   },
   "precedents": [
-    {"id": 1, "summary": "Ban for insulting the streamer, first violation, appeal with apology", "decision": "overturn"}
+    {
+      "id": 1,
+      "summary": "Ban for insulting the streamer, first violation, appeal with apology",
+      "decision": "overturn"
+    }
   ],
   "dialogue": [
-    {"speaker": "clerk",      "emotion": "neutral", "text": "Case #7: 'Chat vs kotyk_2007'. The defendant is banned for insulting the streamer."},
-    {"speaker": "prosecutor", "emotion": "angry",   "text": "Your Honor, the message is written with commas and without a single typo. Cats don't type like that!"},
-    {"speaker": "defense",    "emotion": "ironic",  "text": "Objection! My client is prepared to show a photo of cat Barsyk. Look at those offended eyes."},
-    {"speaker": "prosecutor", "emotion": "neutral", "text": "Last time it was the brother's fault. Now it's the cat. Who's next — a hamster?"},
-    {"speaker": "defense",    "emotion": "neutral", "text": "That was spam, not an insult. For a whole month — not a single toxic word. Chat knows him as a peaceful viewer."},
-    {"speaker": "judge",      "emotion": "neutral", "text": "Defendant, do you understand that the brother and the cat already form an organized group?"},
-    {"speaker": "defense",    "emotion": "ironic",  "text": "Your Honor, my client is prepared to put a password on his keyboard."},
-    {"speaker": "judge",      "emotion": "solemn",  "text": "The court notes precedent #1: first insult with no prior toxicity. The cat story is implausible, but the ban is disproportionate."},
-    {"speaker": "judge",      "emotion": "solemn",  "text": "Verdict: unban with a final warning. Barsyk — banned from approaching the keyboard."}
+    {
+      "speaker": "clerk",
+      "emotion": "neutral",
+      "text": "Case #7: 'Chat vs kotyk_2007'. The defendant is banned for insulting the streamer."
+    },
+    {
+      "speaker": "prosecutor",
+      "emotion": "angry",
+      "text": "Your Honor, the message is written with commas and without a single typo. Cats don't type like that!"
+    },
+    {
+      "speaker": "defense",
+      "emotion": "ironic",
+      "text": "Objection! My client is prepared to show a photo of cat Barsyk. Look at those offended eyes."
+    },
+    {
+      "speaker": "prosecutor",
+      "emotion": "neutral",
+      "text": "Last time it was the brother's fault. Now it's the cat. Who's next — a hamster?"
+    },
+    {
+      "speaker": "defense",
+      "emotion": "neutral",
+      "text": "That was spam, not an insult. For a whole month — not a single toxic word. Chat knows him as a peaceful viewer."
+    },
+    {
+      "speaker": "judge",
+      "emotion": "neutral",
+      "text": "Defendant, do you understand that the brother and the cat already form an organized group?"
+    },
+    {
+      "speaker": "defense",
+      "emotion": "ironic",
+      "text": "Your Honor, my client is prepared to put a password on his keyboard."
+    },
+    {
+      "speaker": "judge",
+      "emotion": "solemn",
+      "text": "The court notes precedent #1: first insult with no prior toxicity. The cat story is implausible, but the ban is disproportionate."
+    },
+    {
+      "speaker": "judge",
+      "emotion": "solemn",
+      "text": "Verdict: unban with a final warning. Barsyk — banned from approaching the keyboard."
+    }
   ],
   "final_decision": null
 }
