@@ -1,0 +1,21 @@
+:root {
+  --bg: #0f1020;
+  --panel: #1a1c36;
+  --text: #f2f3fa;
+  --muted: #9a9cc0;
+  --defense: #3b7bdc;
+  --prosecutor: #d8374a;
+  --judge: #e0b04a;
+  --clerk: #4da57a;
+  --ok: #2fbf71;
+  --bad: #e5484d;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Segoe UI", system-ui, sans-serif;
+}

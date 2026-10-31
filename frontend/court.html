@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI-Суд</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+  html, body { height: 100%; overflow: hidden; }
+  body { display: grid; place-items: center; background: #000; }
+  button { font: inherit; cursor: pointer; }
+
+  .stage {
+    position: relative; overflow: hidden; container-type: inline-size;
+    width: min(100vw, 177.78vh); aspect-ratio: 16 / 9;
+    background: var(--zone, #333);
+    transition: background .15s;
+    font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+  }
+  .stage::before { /* стіна з панелями */
+    content: ""; position: absolute; inset: 0;
+    background: repeating-linear-gradient(90deg, rgba(255,255,255,.06) 0 .2cqw, transparent .2cqw 12cqw);
+  }
+  .stage[data-speaker="judge"]      { --zone: linear-gradient(#6b4524, #3a2412); --role: var(--judge); }
+  .stage[data-speaker="defense"]    { --zone: linear-gradient(#2c4d86, #162a4e); --role: var(--defense); }
+  .stage[data-speaker="prosecutor"] { --zone: linear-gradient(#7d2a38, #3e1119); --role: var(--prosecutor); }
+  .stage[data-speaker="clerk"]      { --zone: linear-gradient(#35654f, #1b3528); --role: var(--clerk); }
+
+  .bench { position: absolute; left: 0; right: 0; bottom: 0; height: 36%; background: linear-gradient(rgba(0,0,0,.35), rgba(0,0,0,.75)); border-top: .4cqw solid rgba(0,0,0,.5); }
+
+  #sprite { position: absolute; bottom: 12%; left: 50%; height: 84%; transform: translateX(-50%); }
+  #sprite.pop   { animation: pop .18s ease-out; }
+  #sprite.shake { animation: shake .4s; }
+  @keyframes pop   { from { transform: translateX(-50%) scale(1.06); opacity: .4; } }
+  @keyframes shake { 20%, 60% { transform: translateX(calc(-50% - 1cqw)); } 40%, 80% { transform: translateX(calc(-50% + 1cqw)); } }
+
+  .top { position: absolute; top: 0; left: 0; right: 0; display: flex; justify-content: space-between; align-items: flex-start; padding: 1.2cqw 2cqw; gap: 2cqw; }
+  .title { font-size: 2.2cqw; font-weight: 800; letter-spacing: .1cqw; text-shadow: 0 .2cqw .4cqw #000; }
+  .defendant { background: rgba(8,10,40,.78); border: .2cqw solid rgba(255,255,255,.7); border-radius: .8cqw; padding: .7cqw 1.2cqw; font-size: 1.25cqw; line-height: 1.45; max-width: 36cqw; }
+  .defendant b { font-size: 1.6cqw; }
+
+  .box { position: absolute; left: 4cqw; right: 4cqw; bottom: 3cqw; height: 14cqw; background: rgba(8,12,64,.9); border: .35cqw solid #fff; border-radius: 1cqw; padding: 2.4cqw 2.4cqw 1.2cqw; }
+  .plate { position: absolute; top: -1.9cqw; left: 2cqw; padding: .3cqw 1.8cqw; background: var(--role); border: .25cqw solid #fff; border-radius: .6cqw; font-size: 1.7cqw; font-weight: 800; text-shadow: 0 .1cqw .2cqw #0008; }
+  #text { margin: 0; font-size: 2.3cqw; line-height: 1.4; font-weight: 600; color: #fff; text-shadow: 0 .15cqw 0 #000; }
+  #more { position: absolute; right: 1.6cqw; bottom: .8cqw; font-size: 1.8cqw; animation: blink .8s steps(2) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  .shout { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; opacity: 0;
+           font: italic 900 11cqw Impact, "Arial Black", sans-serif; color: #fff; -webkit-text-stroke: .5cqw var(--role);
+           text-shadow: .6cqw .6cqw 0 var(--role), 0 0 3cqw #000; }
+  .shout.on { animation: shout 1s both; }
+  @keyframes shout {
+    0%   { opacity: 1; transform: scale(2.4) rotate(-4deg); background: #fff; }
+    15%  { transform: scale(1) rotate(-3deg); background: #fff0; }
+    25%  { transform: translate(1cqw, -.6cqw) rotate(-3deg); }
+    35%  { transform: translate(-1cqw, .6cqw) rotate(-3deg); }
+    45%  { transform: translate(.6cqw, .4cqw) rotate(-3deg); }
+    80%  { opacity: 1; transform: rotate(-3deg); }
+    100% { opacity: 0; transform: scale(1.1) rotate(-3deg); }
+  }
+
+  .cover, .verdict { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 1.4cqw; padding: 4cqw; }
+  .cover { background: rgba(5,6,24,.88); }
+  .cover h1 { margin: 0; font-size: 5cqw; }
+  .cover p { margin: 0; font-size: 1.8cqw; color: var(--muted); }
+  #start { padding: 1cqw 3cqw; font-size: 2.4cqw; font-weight: 800; color: #fff; background: var(--defense); border: .3cqw solid #fff; border-radius: 1cqw; }
+  #start:disabled { opacity: .4; cursor: default; }
+
+  .verdict { background: rgba(5,6,24,.98); animation: fade .5s; }
+  .verdict[data-kind="ok"]  { --v: var(--ok); }
+  .verdict[data-kind="bad"] { --v: var(--bad); }
+  .verdict h1 { margin: 0; font: italic 900 9cqw Impact, "Arial Black", sans-serif; color: var(--v); -webkit-text-stroke: .25cqw #fff; text-shadow: .5cqw .5cqw 0 #000; }
+  .verdict .reason { max-width: 70cqw; font-size: 2cqw; line-height: 1.45; }
+  .chips { display: flex; flex-wrap: wrap; justify-content: center; gap: .8cqw; }
+  .chips span { padding: .4cqw 1.2cqw; border: .2cqw solid var(--v); border-radius: 5cqw; font-size: 1.6cqw; }
+  .prec { font-size: 1.6cqw; color: var(--muted); }
+  @keyframes fade { from { opacity: 0; } }
+  [hidden] { display: none !important; }
+
+  .controls { position: fixed; right: 12px; bottom: 12px; z-index: 5; display: flex; gap: 8px; align-items: center; }
+  .controls button { padding: 8px 14px; color: #fff; background: #2a2d5c; border: 1px solid #fff8; border-radius: 8px; }
+  #status { color: #fff; font-size: 14px; text-shadow: 0 1px 2px #000; }
+  body.overlay .controls { display: none; }
+</style>
+</head>
+<body>
+<div class="stage" id="stage" data-speaker="judge">
+  <div class="bench"></div>
+  <img id="sprite" alt="">
+  <header class="top">
+    <div class="title">⚖️ AI-СУД <span id="caseNo"></span></div>
+    <div class="defendant">
+      <b id="dName"></b><br>
+      <span id="dBan"></span><br>
+      <span id="dAppeal"></span><br>
+      <span id="dCh"></span>
+    </div>
+  </header>
+  <div class="box">
+    <div class="plate" id="plate"></div>
+    <p id="text"></p>
+    <span id="more" hidden>▼</span>
+  </div>
+  <div class="shout" id="shout"></div>
+
+  <div class="verdict" id="verdict" hidden>
+    <h1 id="vTitle"></h1>
+    <div class="reason" id="vReason"></div>
+    <div class="chips" id="vChips"></div>
+    <div class="prec" id="vPrec"></div>
+  </div>
+
+  <div class="cover" id="cover">
+    <h1 id="coverTitle">⚖️ AI-СУД</h1>
+    <p id="coverSub">Завантажуємо справу…</p>
+    <button id="start" disabled>▶ Старт</button>
+  </div>
+</div>
+
+<div class="controls">
+  <span id="status"></span>
+  <button id="skip" hidden>⏭ Пропустити</button>
+  <button id="confirm" hidden></button>
+  <button id="change" hidden></button>
+</div>
+
+<script type="module">
+import { api, MOCK } from './common.js';
+
+const q = new URLSearchParams(location.search);
+const caseId = q.get('case') || '1';
+if (q.has('overlay')) document.body.classList.add('overlay');
+
+// Спрайти: assets/<role>_idle.<EXT> і <role>_talk.<EXT>. Для власних PNG змінити EXT.
+const EXT = 'svg';
+const ROLES = {
+  clerk:      { name: 'Секретар',  pitch: 420 },
+  prosecutor: { name: 'Прокурор',  pitch: 330 },
+  defense:    { name: 'Адвокат',   pitch: 260 },
+  judge:      { name: 'Суддя',     pitch: 170 },
+};
+// emotion → вигук (лише коли говорить адвокат/прокурор і змінився мовець)
+const SHOUT = { angry: 'OBJECTION!', ironic: 'HOLD IT!' };
+
+const $ = id => document.getElementById(id);
+const stage = $('stage'), sprite = $('sprite'), status = $('status');
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const img = (role, open) => `assets/${role}_${open ? 'talk' : 'idle'}.${EXT}`;
+Object.keys(ROLES).forEach(r => [0, 1].forEach(o => { new Image().src = img(r, o); }));
+
+let skipped = false;
+let ac = null;
+
+function blip(freq) {
+  if (!ac) return;
+  const o = ac.createOscillator(), g = ac.createGain();
+  o.type = 'square';
+  o.frequency.value = freq * (0.96 + Math.random() * 0.08);
+  g.gain.setValueAtTime(0.05, ac.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + 0.06);
+  o.connect(g).connect(ac.destination);
+  o.start();
+  o.stop(ac.currentTime + 0.07);
+}
+
+function bang() {
+  if (!ac) return;
+  const len = ac.sampleRate * 0.3, buf = ac.createBuffer(1, len, ac.sampleRate), d = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len);
+  const n = ac.createBufferSource(), g = ac.createGain(), o = ac.createOscillator();
+  n.buffer = buf;
+  g.gain.value = 0.25;
+  o.frequency.setValueAtTime(420, ac.currentTime);
+  o.frequency.exponentialRampToValueAtTime(60, ac.currentTime + 0.25);
+  n.connect(g); o.connect(g); g.connect(ac.destination);
+  n.start(); o.start(); o.stop(ac.currentTime + 0.3);
+}
+
+function retrigger(el, cls) {
+  el.classList.remove(cls);
+  void el.offsetWidth;
+  el.classList.add(cls);
+}
+
+async function shout(text) {
+  $('shout').textContent = text;
+  retrigger($('shout'), 'on');
+  bang();
+  await sleep(900);
+}
+
+async function type(key, text) {
+  const out = $('text');
+  let letters = 0, open = false;
+  out.textContent = '';
+  $('more').hidden = true;
+  for (let i = 0; i < text.length && !skipped; i++) {
+    const ch = text[i];
+    out.textContent = text.slice(0, i + 1);
+    if (/[\p{L}\p{N}]/u.test(ch)) {
+      if (letters % 2 === 0) blip(ROLES[key].pitch);
+      if (letters % 3 === 0) { open = !open; sprite.src = img(key, open); }
+      letters++;
+    } else if (/[.,!?…:;—]/.test(ch)) {
+      sprite.src = img(key, false); // пауза на розділовому знаку: рот закритий
+      await sleep(170);
+    }
+    await sleep(38);
+  }
+  out.textContent = text;
+  sprite.src = img(key, false);
+}
+
+async function play(line, prevSpeaker) {
+  const key = ROLES[line.speaker] ? line.speaker : 'clerk';
+  stage.dataset.speaker = key;
+  sprite.src = img(key, false);
+  $('plate').textContent = ROLES[key].name;
+  $('text').textContent = '';
+  $('more').hidden = true;
+  retrigger(sprite, 'pop');
+  if (key !== prevSpeaker && (key === 'defense' || key === 'prosecutor') && SHOUT[line.emotion]) {
+    await shout(SHOUT[line.emotion]);
+  }
+  if (line.emotion === 'angry') retrigger(sprite, 'shake');
+  await type(key, line.text);
+  $('more').hidden = false;
+  if (!skipped) await sleep(700 + line.text.length * 8);
+}
+
+function showVerdict(c) {
+  const j = c.judge, ok = j.decision === 'overturn';
+  $('verdict').dataset.kind = ok ? 'ok' : 'bad';
+  $('vTitle').textContent = ok ? '✅ РОЗБАНЕНО' : '⛔ ПОКАРАННЯ ЗАЛИШЕНО'; // з judge.decision, не з діалогу
+  $('vReason').textContent = j.reasoning;
+  $('vChips').replaceChildren(...j.key_factors.map(f => Object.assign(document.createElement('span'), { textContent: f })));
+  $('vPrec').textContent = c.precedents
+    .filter(p => j.precedent_ids.includes(p.id))
+    .map(p => `Спиралися на прецедент №${p.id}: ${p.summary}`).join(' · ');
+  $('verdict').hidden = false;
+  $('skip').hidden = true;
+  if (c.final_decision) { status.textContent = 'Вирок підтверджено'; return; }
+  const other = ok ? 'uphold' : 'overturn';
+  $('confirm').textContent = '✔ Підтвердити вирок';
+  $('confirm').onclick = () => confirm(c, j.decision);
+  $('change').textContent = ok ? '↩ Залишити покарання' : '↩ Розбанити';
+  $('change').onclick = () => confirm(c, other);
+  $('confirm').hidden = $('change').hidden = false;
+}
+
+async function confirm(c, decision) {
+  $('confirm').disabled = $('change').disabled = true;
+  try {
+    await api(`/api/court/cases/${c.id}/confirm`, { method: 'POST', body: { final_decision: decision } });
+    $('confirm').hidden = $('change').hidden = true;
+    status.textContent = 'Вирок підтверджено';
+  } catch (e) {
+    const d = e.data && e.data.detail;
+    status.textContent = `Помилка: ${typeof d === 'string' ? d : e.message}`;
+    $('confirm').disabled = $('change').disabled = false;
+  }
+}
+
+async function load() {
+  for (;;) {
+    try {
+      const c = await api(`/api/court/cases/${caseId}`);
+      if (c.status === 'ready' || c.status === 'confirmed') return c;
+      $('coverSub').textContent = c.status === 'failed'
+        ? 'Не вдалося підготувати справу. Перегенеруйте її в адмінці.'
+        : '⏳ Справу ще готують…';
+    } catch (e) {
+      $('coverSub').textContent = `Не вдалося завантажити справу (${e.message})`;
+    }
+    await sleep(3000);
+  }
+}
+
+const c = await load();
+$('caseNo').textContent = `· Справа №${c.incident.id}`;
+$('coverTitle').textContent = `⚖️ Справа №${c.incident.id}`;
+$('coverSub').textContent = `Чат проти ${c.defendant.username}`;
+$('dName').textContent = c.defendant.username;
+$('dBan').textContent = `${c.incident.action === 'ban' ? 'Бан' : 'Таймаут'} за: ${c.incident.reason}`;
+$('dAppeal').textContent = `Апеляція: ${c.appeal.summary}`;
+$('dCh').textContent = `Каналів в історії: ${c.defendant.channels.length}`;
+sprite.src = img('judge', false);
+$('plate').textContent = ROLES.judge.name;
+$('start').disabled = false;
+
+$('skip').onclick = () => { skipped = true; };
+$('start').onclick = async () => {
+  ac = new (window.AudioContext || window.webkitAudioContext)(); // потрібен жест користувача
+  $('cover').hidden = true;
+  $('skip').hidden = false;
+  let prev = null;
+  for (const line of c.dialogue) {
+    if (skipped) break;
+    await play(line, prev);
+    prev = line.speaker;
+  }
+  showVerdict(c);
+};
+</script>
+</body>
+</html>
