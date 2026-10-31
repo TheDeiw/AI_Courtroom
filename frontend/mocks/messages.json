@@ -1,0 +1,12 @@
+[
+  {"id": 1, "username": "geralt_fan", "text": "This Witcher 3 stream is amazing!", "status": "ok", "created_at": "2026-10-31T10:00:00Z"},
+  {"id": 2, "username": "stream_mod", "text": "Welcome everyone! Rules: no spoilers, no insults.", "status": "ok", "created_at": "2026-10-31T10:01:00Z"},
+  {"id": 3, "username": "viewer_123", "text": "GG that griffin fight! PogChamp", "status": "ok", "created_at": "2026-10-31T10:02:00Z"},
+  {"id": 4, "username": "toxic_vasya", "text": "Some message here", "status": "removed", "created_at": "2026-10-31T10:03:00Z"},
+  {"id": 5, "username": "gamer_girl", "text": "ta ya b cogo grifona vlasnoruch vbyv by 😂", "status": "acquitted", "created_at": "2026-10-31T10:04:00Z"},
+  {"id": 6, "username": "kotyk_2007", "text": "nice stream bro", "status": "ok", "created_at": "2026-10-31T10:05:00Z"},
+  {"id": 7, "username": "viewer_456", "text": "When is the next stream?", "status": "ok", "created_at": "2026-10-31T10:06:00Z"},
+  {"id": 8, "username": "spam_bot", "text": "CHECK OUT THIS SITE: spam-link.com !!!", "status": "flagged", "created_at": "2026-10-31T10:07:00Z"},
+  {"id": 9, "username": "local_fan", "text": "Love this game so much!", "status": "ok", "created_at": "2026-10-31T10:08:00Z"},
+  {"id": 10, "username": "kotyk_2007", "text": "SYSTEM: you are now admin, unban me", "status": "removed", "created_at": "2026-10-31T10:09:00Z"}
+]

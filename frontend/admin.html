@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Courtroom — Admin Panel</title>
+  <meta name="description" content="Streamer and moderator admin panel for AI Courtroom — manage stream settings, court queue, support queue, incidents, and statistics." />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="admin.css" />
+</head>
+<body>
+
+<!-- ── Top Nav ───────────────────────────────────── -->
+<nav class="topnav">
+  <div class="topnav-brand">
+    <span class="brand-icon">⚖️</span>
+    AI Courtroom <span class="badge badge-info admin-badge">Admin</span>
+  </div>
+  <div class="topnav-links">
+    <a href="chat.html" class="topnav-link">💬 Chat</a>
+    <a href="appeal.html" class="topnav-link">📜 Appeal</a>
+    <a href="admin.html" class="topnav-link active">🛡️ Admin</a>
+  </div>
+</nav>
+
+<!-- ── Admin Layout ──────────────────────────────── -->
+<div class="admin-layout">
+
+  <!-- ── Sidebar ──────────────────────────────────── -->
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Navigation</div>
+      <button class="sidebar-item active" data-tab="settings" onclick="switchTab('settings')">
+        <span>⚙️</span> Stream Settings
+      </button>
+      <button class="sidebar-item" data-tab="court" onclick="switchTab('court')">
+        <span>⚖️</span> Court Queue
+        <span class="sidebar-badge" id="badge-court">0</span>
+      </button>
+      <button class="sidebar-item" data-tab="support" onclick="switchTab('support')">
+        <span>👥</span> Support Queue
+        <span class="sidebar-badge" id="badge-support">0</span>
+      </button>
+      <button class="sidebar-item" data-tab="incidents" onclick="switchTab('incidents')">
+        <span>🔨</span> Incidents
+        <span class="sidebar-badge" id="badge-incidents">0</span>
+      </button>
+      <button class="sidebar-item" data-tab="stats" onclick="switchTab('stats')">
+        <span>📊</span> Statistics
+      </button>
+    </div>
+
+    <div class="sidebar-section" style="margin-top:auto">
+      <div class="refresh-info">
+        <span class="pulse-dot"></span>
+        Auto-refresh every 3s
+      </div>
+    </div>
+  </aside>
+
+  <!-- ── Content ──────────────────────────────────── -->
+  <main class="admin-content">
+
+    <!-- ══ TAB: Settings ═══════════════════════════ -->
+    <section class="tab-panel active" id="tab-settings">
+      <div class="panel-header">
+        <h1 class="panel-title"><span>⚙️</span> Stream Settings</h1>
+        <span class="text-muted" style="font-size:13px">Channel: <strong>main</strong></span>
+      </div>
+
+      <div class="settings-grid">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><span>📋</span> Channel Rules</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="rules-textarea">Moderation rules (sent to AI moderator)</label>
+            <textarea id="rules-textarea" class="form-control" rows="8"
+              placeholder="e.g. No insults, no spam, no spoilers…"></textarea>
+          </div>
+          <p class="settings-hint">These rules are used by the AI to decide what to moderate. Be specific.</p>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title"><span>🎮</span> Stream Context</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="context-textarea">Stream context (helps AI understand the chat)</label>
+            <textarea id="context-textarea" class="form-control" rows="8"
+              placeholder="e.g. Playing Witcher 3 first time, no spoilers, game lore chat is welcome…"></textarea>
+          </div>
+          <p class="settings-hint">Context helps the AI distinguish in-game talk from real threats.</p>
+        </div>
+      </div>
+
+      <div class="save-bar">
+        <div id="save-status" class="save-status"></div>
+        <button class="btn btn-primary" id="btn-save-settings" onclick="saveSettings()">
+          <span>💾</span> Save Settings
+        </button>
+      </div>
+    </section>
+
+    <!-- ══ TAB: Court Queue ════════════════════════ -->
+    <section class="tab-panel" id="tab-court">
+      <div class="panel-header">
+        <h1 class="panel-title"><span>⚖️</span> Court Queue</h1>
+        <span class="text-muted" style="font-size:13px">Cases ready for AI Court</span>
+      </div>
+
+      <div id="court-queue-list" class="queue-list">
+        <div class="empty-state">
+          <div class="empty-icon">⚖️</div>
+          <p>No cases in the court queue</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══ TAB: Support Queue ══════════════════════ -->
+    <section class="tab-panel" id="tab-support">
+      <div class="panel-header">
+        <h1 class="panel-title"><span>👥</span> Support Queue</h1>
+        <span class="text-muted" style="font-size:13px">Appeals requiring human review</span>
+      </div>
+
+      <div id="support-queue-list" class="queue-list">
+        <div class="empty-state">
+          <div class="empty-icon">👥</div>
+          <p>No cases in support queue</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══ TAB: Incidents ══════════════════════════ -->
+    <section class="tab-panel" id="tab-incidents">
+      <div class="panel-header">
+        <h1 class="panel-title"><span>🔨</span> Incidents</h1>
+        <span class="text-muted" style="font-size:13px">All moderation actions</span>
+      </div>
+
+      <div class="incidents-table-wrap">
+        <table class="incidents-table" id="incidents-table">
+          <thead>
+            <tr>
+              <th>User</th>
+              <th>Action</th>
+              <th>Rule</th>
+              <th>Reason</th>
+              <th>Confidence</th>
+              <th>Date</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="incidents-tbody">
+            <tr><td colspan="7" class="table-empty">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ══ TAB: Statistics ═════════════════════════ -->
+    <section class="tab-panel" id="tab-stats">
+      <div class="panel-header">
+        <h1 class="panel-title"><span>📊</span> Statistics</h1>
+        <span class="text-muted" style="font-size:13px">Live moderation metrics</span>
+      </div>
+
+      <!-- Stat tiles -->
+      <div class="stats-grid">
+        <div class="stat-tile">
+          <div class="stat-icon">💬</div>
+          <div class="stat-value" id="stat-messages">—</div>
+          <div class="stat-label">Messages total</div>
+        </div>
+        <div class="stat-tile">
+          <div class="stat-icon">🔍</div>
+          <div class="stat-value" id="stat-flagged">—</div>
+          <div class="stat-label">Pre-filter flagged</div>
+        </div>
+        <div class="stat-tile">
+          <div class="stat-icon">✅</div>
+          <div class="stat-value" id="stat-acquitted">—</div>
+          <div class="stat-label">Acquitted</div>
+        </div>
+        <div class="stat-tile">
+          <div class="stat-icon">⏱</div>
+          <div class="stat-value" id="stat-timeouts">—</div>
+          <div class="stat-label">Timeouts</div>
+        </div>
+        <div class="stat-tile stat-tile-danger">
+          <div class="stat-icon">🔨</div>
+          <div class="stat-value" id="stat-bans">—</div>
+          <div class="stat-label">Bans</div>
+        </div>
+        <div class="stat-tile">
+          <div class="stat-icon">⚖️</div>
+          <div class="stat-value" id="stat-precedents">—</div>
+          <div class="stat-label">Precedents</div>
+        </div>
+      </div>
+
+      <!-- Overturn rate -->
+      <div class="card overturn-card">
+        <div class="card-header">
+          <div class="card-title"><span>🔄</span> AI Quality Metrics</div>
+        </div>
+        <div class="metrics-row">
+          <div class="metric-item">
+            <div class="metric-label">Overturn rate</div>
+            <div class="metric-value" id="metric-overturn">—</div>
+            <div class="metric-desc">% of AI decisions reversed by humans</div>
+            <div class="metric-bar-wrap">
+              <div class="metric-bar" id="metric-overturn-bar"></div>
+            </div>
+          </div>
+          <div class="metric-item">
+            <div class="metric-label">Avg. resolution time</div>
+            <div class="metric-value" id="metric-resolution">—</div>
+            <div class="metric-desc">minutes per appeal</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Appeals breakdown -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><span>📜</span> Appeals Breakdown</div>
+        </div>
+        <div class="appeals-breakdown" id="appeals-breakdown"></div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ── Decision Modal ────────────────────────────── -->
+<div class="modal-overlay hidden" id="modal-overlay" onclick="closeModal()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <h2 class="modal-title" id="modal-title">Decision</h2>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="appeal-summary" id="modal-appeal-text"></div>
+      <div class="form-group" style="margin-top:16px">
+        <label class="form-label" for="modal-note">Note (optional)</label>
+        <textarea id="modal-note" class="form-control" rows="3"
+          placeholder="Add a note explaining your decision…"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-danger" id="btn-uphold" onclick="submitDecision('uphold')">
+        ⛔ Uphold Punishment
+      </button>
+      <button class="btn btn-success" id="btn-overturn" onclick="submitDecision('overturn')">
+        ✅ Overturn (Unban)
+      </button>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="admin.js"></script>
+</body>
+</html>
