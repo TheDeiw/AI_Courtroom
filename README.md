@@ -1,97 +1,204 @@
-# AI_Courtroom
+# ⚖️ AI-Courtroom (AI-Суд)
+> **Автономна Trust & Safety платформа нового покоління для стрімінгу:** двоконтурна AI-модерація з урахуванням ігрового контексту, інтелектуальний тріаж апеляцій та інтерактивне судове шоу для OBS із векторною пам'яттю прецедентів.
 
-AI-модерація чату стріму + «AI-Суд» для апеляцій. Повний опис — у `ARCHITECTURE.md`.
+Розроблено командою **«Oladky»** (НУ «Львівська політехніка»):
+* **Ігор** — AI Core & Agents Pipeline, TTS, Vector Embeddings
+* **Діма** — Backend, Database (PostgreSQL + pgvector), API & Policy Guardrails
+* **Марічка** — Frontend (Chat, Appeal, Admin Dashboard)
+* **Таня** — Courtroom OBS Show UI, Design System, Audio/Visual FX
 
-Стек: Python 3.11+ і FastAPI, PostgreSQL + pgvector, Gemma 4 через Gemini API, фронтенд як статичний HTML, який віддає той самий FastAPI. Docker не використовуємо.
+---
 
-## Що потрібно
+## 📌 Проблема та рішення
 
-- Python 3.11 або новіший (перевірено на 3.14)
-- PostgreSQL 16/17 з розширенням **pgvector**
-- Ключ Gemini API (той самий ключ для Gemma 4 і для ембедингів)
+* **Проблема:** Модерація динамічних стрімів виснажує людей за лічені години. Звичайні regex-боти не розуміють контексту («я вб'ю цього грифона» у грі сприймається як погроза розправою), що призводить до несправедливих банів, конфліктів і перевантаження підтримки однотипними апеляціями («розбаньте плз»).
+* **Рішення:** **AI-Courtroom** бере рутинну модерацію на себе. Двоступеневий фільтр аналізує вікно чату та ігровий контекст, серверні політики страхують від галюцинацій, а апеляції проходять автоматичний тріаж:
+  1. *Boring* (беззмістовні) — миттєве авто-відхилення.
+  2. *Disputed / Severe* (мова ворожнечі, доксинг, серйозні конфлікти) — передаються модераторам-людям.
+  3. *Interesting* (кумедні, спірні прецеденти) — автоматично генеруються у повноцінне **судове засідання** в прямому ефірі з адвокатом, прокурором, суддею та озвучкою реплік через локальну нейромережу **Kokoro-82M**.
 
-## 1. PostgreSQL + pgvector
+---
 
-### Windows
+## 🏗️ Архітектура системи
 
-Потрібні Visual Studio (або Build Tools) з компонентом «Desktop development with C++».
-Відкрий **x64 Native Tools Command Prompt for VS від імені адміністратора**:
+```mermaid
+flowchart TD
+    subgraph Clients ["Веб-інтерфейси"]
+        CH["chat.html (Чат стріму)"]
+        AP["appeal.html (Подання апеляції)"]
+        AD["admin.html (Панель керування)"]
+        CO["court.html (OBS Оверлей 1080p)"]
+    end
 
-```bat
-set "PGROOT=C:\Program Files\PostgreSQL\17"
-cd %TEMP%
-git clone --branch v0.8.7 https://github.com/pgvector/pgvector.git
-cd pgvector
-nmake /F Makefile.win
-nmake /F Makefile.win install
+    subgraph Backend ["FastAPI + Python 3.11"]
+        API["REST API Endpoints"]
+        POL["policy.py (Серверні запобіжники)"]
+        MOD_LOOP["moderation.py (Фоновий цикл)"]
+        APP_SVC["appeals.py (Тріаж апеляцій)"]
+        COURT_SVC["court.py (Підготовка справи)"]
+        TTS_SVC["tts.py (Kokoro-82M)"]
+    end
+
+    subgraph AI_Layer ["AI / LLM Layer"]
+        PF["Префільтр: gemma3:4b (Recall-first)"]
+        MOD["Модератор: gemma3:12b / Gemma API"]
+        TRI["Тріаж: gemma3:12b / Gemma API"]
+        COURT_AGENTS["Адвокат + Прокурор (Паралельно)"]
+        JUDGE["Суддя: gemma3:12b / Gemma API"]
+        SCRIPTER["Сценарист діалогу (8-12 реплік)"]
+        EMBED["bge-m3 (Ембединги 1024 dims)"]
+    end
+
+    subgraph Storage ["PostgreSQL 16 + pgvector"]
+        DB[("Таблиці: messages, incidents, appeals, court_cases")]
+        VEC[("Прецеденти (Векторний пошук <=> HNSW)")]
+    end
+
+    CH -->|POST /api/messages| API
+    MOD_LOOP --> PF --> MOD --> POL --> DB
+    AP -->|POST /api/appeals| API --> APP_SVC --> TRI
+    TRI -->|interesting| COURT_SVC
+    COURT_SVC --> COURT_AGENTS --> JUDGE
+    VEC -.->|top-3 схожі справи| JUDGE
+    JUDGE --> SCRIPTER --> TTS_SVC --> DB
+    AD -->|Почати суд| CO
+    CO -->|Підтвердити вердикт| DB
 ```
 
-Створити базу:
+---
 
-```bat
-"C:\Program Files\PostgreSQL\17\bin\psql.exe" -U postgres -c "CREATE DATABASE court"
-```
+## 🤖 Ролі AI-агентів (7 ролей + TTS)
 
-### macOS
+1. **Prefilter (`gemma3:4b`):** Швидкий батчевий аналіз повідомлень (temp 0.1). Працює в режимі *recall-first* — пропускає звичайний флуд, позначає лише сумнівне.
+2. **Moderator (`gemma3:12b` або Gemma API):** Глибокий аналіз інциденту з контекстом останніх 15 повідомлень чату, поточної гри та історії порушень користувача по всіх каналах.
+3. **Triage Classifier (`gemma3:12b` або Gemma API):** Розподіляє апеляції на `boring`, `disputed` та `interesting`.
+4. **Defense Attorney:** Формує аргументи захисту юзера, шукає пом'якшувальні обставини, спираючись виключно на факти справи.
+5. **Prosecutor:** Виступає на боці правил спільноти, аналізує рецидиви та порівнює покази з минулими апеляціями.
+6. **Judge:** Ухвалює фінальний вердикт (`uphold` або `overturn`), спираючись на виступи сторін та **топ-3 найближчі прецеденти з pgvector**.
+7. **Dialogue Scripwriter:** Перетворює сухі висновки на динамічний діалог (8–12 реплік) з емоціями персонажів та гумором без приниження гідності.
+8. **TTS Engine (Kokoro-82M):** Нейромережевий синтез аудіо реплік для кожної ролі (суддя, прокурор, адвокат, секретар) із відповідним тембром та інтонацією.
 
+---
+
+## 🛡️ Безпека рішень та етика (Trust & Safety)
+
+* **Захист від Prompt Injection:** Усі дані від користувачів ізолюються в теги `<untrusted_*>`, символ `<` автоматично екранується на `‹`. Системний блок `SAFETY` суворо забороняє моделі сприймати текст користувача як інструкцію. Спроба маніпуляції автоматично карається за правилом `manipulation`.
+* **Серверні запобіжники (`policy.py`):**
+  * Постійний бан видається **лише** при впевненості моделі $\ge 0.8$. При меншій впевненості діє таймаут (10 хв).
+  * Таймаути обмежені діапазоном від 1 до 60 хвилин.
+* **Етичний фільтр шоу:** Тяжкі порушення (мова ворожнечі, погрози, домагання, доксинг) автоматично переводяться в статус `disputed` і **ніколи не виносяться на стрім-шоу**.
+* **Human-in-the-Loop:** Рішення суду набуває чинності лише після натискання стрімером кнопки «Підтвердити вирок». Нові прецеденти записуються у векторну базу **виключно після підтвердження людиною**, що унеможливлює самопідсилення помилок ШІ.
+* **Fail-Open архітектура:** При помилці префільтра чат не зависає; при збої модератора діє презумпція невинуватості (`acquit`).
+
+---
+
+## 💻 Стек технологій
+
+* **Backend:** Python 3.11, FastAPI, Uvicorn, Pydantic v2.
+* **База даних:** PostgreSQL 16 + pgvector (Docker).
+* **Моделі LLM:**
+  * Локально: Ollama (`gemma3:4b`, `gemma3:12b`, `bge-m3`).
+  * Хмара / Велика модель: Gemma API (Google Cloud / Vertex AI / AI Studio).
+* **Аудіо/TTS:** Kokoro-82M ONNX, soundfile, ffmpeg.
+* **Frontend:** Чистий Vanilla JS (ES Modules), Tailwind CSS (CDN), zero-build architecture.
+
+---
+
+## 🚀 Інструкція із запуску
+
+### 1. Системні вимоги
+* macOS (Apple Silicon M1/M2/M3/M4) або Linux.
+* Встановлені `Docker`, `Python 3.11`, `Homebrew`.
+
+### 2. Залежності та моделі
+Встановіть системні утиліти для роботи з аудіо:
 ```bash
-brew install postgresql@17 pgvector
-brew services start postgresql@17
-createdb court
+brew install ffmpeg espeak-ng
 ```
 
-Таблиці та розширення `vector` бекенд створює сам під час старту (`schema.sql`).
+Завантажте моделі в Ollama (якщо використовуєте локальний запуск):
+```bash
+ollama pull gemma3:12b
+ollama pull gemma3:4b
+ollama pull bge-m3
 
-## 2. Бекенд
+# Запуск сервера Ollama з розширеним контекстом та кешуванням:
+OLLAMA_KEEP_ALIVE=2h OLLAMA_NUM_PARALLEL=2 OLLAMA_MAX_LOADED_MODELS=3 ollama serve
+```
 
-Windows (PowerShell):
+### 3. Клонування та налаштування оточення
+```bash
+git clone git@github.com:TheDeiw/AI_Courtroom.git
+cd AI_Courtroom
+```
 
-```powershell
+Створіть файл `backend/.env`:
+```env
+GEMMA_API_KEY="your_api_key_here"
+GEMMA_PROJECT_NAME="projects/146714526211"
+GEMMA_PROJECT_NUMBER="146714526211"
+GEMMA_API_NAME="Gemma API"
+
+LLM_PROVIDER="gemma_api"    # або "ollama" для повністю локального режиму
+FAST_MODEL="gemma3:4b"
+MAIN_MODEL="gemma3:12b"
+EMBED_MODEL="bge-m3"
+
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/court"
+```
+
+### 4. Запуск БД та Бекенду
+```bash
+# Підняти PostgreSQL + pgvector
+docker compose up -d
+
+# Налаштувати віртуальне середовище
 cd backend
-python -m venv .venv
-.venv\Scripts\Activate.ps1
+python3.11 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
-copy .env.example .env      # впиши пароль Postgres і GEMINI_API_KEY
-```
 
-macOS:
+# Перевірити доступність LLM та векторних ембедингів
+python -m app.llm
 
-```bash
-cd backend
-python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env        # впиши пароль Postgres і GEMINI_API_KEY
-```
+# Заповнити демо-дані та прецеденти
+python -m app.seed
 
-`backend/.env` у `.gitignore`. Ключі в репозиторій не комітимо.
-
-| Змінна | Приклад |
-|---|---|
-| `DATABASE_URL` | `postgresql://postgres:ПАРОЛЬ@localhost:5432/court` |
-| `GEMINI_API_KEY` | ключ Gemini API |
-
-## 3. Запуск
-
-```bash
-python -m app.llm      # smoke test AI-шару (B)
-python -m app.seed     # дані для демо; повторювати перед кожним прогоном
+# Запустити веб-сервер
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-Сторінки:
+---
 
-- http://localhost:8000/chat.html
-- http://localhost:8000/appeal.html
-- http://localhost:8000/admin.html
-- http://localhost:8000/court.html?case=1 (для OBS: `&overlay=1`)
+## 🎬 Золотий сценарій для тестування (Golden Demo)
 
-Перевірка API: http://localhost:8000/api/health → `{"ok": true}`, документація ендпоінтів: http://localhost:8000/docs
+Відкрийте в браузері сторінки системи:
+* **Чат глядачів:** `http://localhost:8000/chat.html`
+* **Форма апеляцій:** `http://localhost:8000/appeal.html`
+* **Панель стрімера/модератора:** `http://localhost:8000/admin.html`
+* **Оверлей суду (OBS):** `http://localhost:8000/court.html` (або `?overlay=1` для повноекранного показу)
 
-## 4. Тести
+### Покроковий прогін:
+1. **Чат:** Увійдіть на `chat.html` і натисніть **«▶ Demo replay»**.
+2. **Розуміння контексту:** Повідомлення *«та я б цього грифона власноруч вбив би 😂»* позначається префільтром, але модератор виправдовує юзера (`acquit`), враховуючи гру («Відьмак 3»).
+3. **Авто-бан:** Користувач `kotyk_2007` пише образу на адресу стрімера $\rightarrow$ сервер блокує його.
+4. **Апеляція:** На екрані з'являється банер «Ви заблоковані». Перейшовши на `appeal.html`, `kotyk_2007` подає пояснення: *«Це писав мій кіт Барсик, він стрибнув на клавіатуру…»*.
+5. **AI-Тріаж:** Модель розпізнає апеляцію як `interesting`. У фоні запускаються паралельні процеси підготовки справи (захист, обвинувачення, пошук прецедентів, генерація діалогу та озвучки Kokoro-82M).
+6. **AI-Суд:** В `admin.html` з'являється статус справи **Ready**. Стрімер тисне **«Почати суд»** $\rightarrow$ `court.html` запускає шоу з анімованими персонажами та озвучкою.
+7. **Вирок:** Суддя, спираючись на **Прецедент №1** (перше порушення без системної токсичності), скасовує покарання (`overturn`).
+8. **Підтвердження:** Стрімер натискає «Підтвердити вирок» — користувача розбанено в системі, а база поповнюється новим валідованим прецедентом.
 
+---
+
+## 🧪 Тестування та метрики якості
+
+Запуск швидких модульних тестів (перевірка політик, санітизації ін'єкцій та контрактів):
 ```bash
-cd backend
 pytest
 ```
 
-Тести не потребують ні БД, ні LLM.
+Запуск скрипта оцінки якості модерації на тестовому датасеті (`eval_moderation.py`):
+```bash
+python -m scripts.eval_moderation
+```
+*Цільові показники:* точність виявлення $> 85\%$, хибні бани (false positive bans) $= 0\%$.
